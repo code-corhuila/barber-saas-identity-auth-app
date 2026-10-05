@@ -32,14 +32,18 @@ The sign-in and registration screens of BarberSaaS: an **Ionic React** domain ap
 mounted by the Angular shell (`barber-saas-front`) at `/sign-in`. It exposes only `./mount`
 through Native Federation and shares nothing: it receives the shell's HTTP client and session in
 the mount context, so it never creates a client or stores a token itself (norm 5.4.1).
-Screens ported from the prototype (`(auth)/login`, `(auth)/register`): same look, Ionic components.
+Screens ported from the prototype (`(auth)/login`, `(auth)/register`, `(auth)/register-owner`): same
+look, Ionic components. The barbershop sign-up runs the owner-onboarding saga of
+`barber-saas-workflow` (HU-AUTH-003); its plan step is a confirmation, since plans live in
+platform-admin.
 
 ```
 src/mount.tsx            ./mount(element, context) — what the shell calls
 src/shell-contract.ts    the types of the contract with the shell (copied, never imported)
 src/auth/auth-api.ts     login and register, through context.api only (Idempotency-Key on register)
 src/auth/validation.ts   field checks with the limits of auth-service.yaml
-src/pages/               LoginPage, RegisterPage
+src/auth/owner-onboarding.ts  the owner sign-up: step checks, the saga call and its outcome
+src/pages/               LoginPage, RegisterPage, OwnerSignUpPage
 ```
 
 ### How to start it
@@ -50,7 +54,8 @@ npm start      # builds and serves dist/identity-auth at http://localhost:4301 (
 ```
 
 Then start the shell (`npm start` in `barber-saas-front`, http://localhost:4200) and the platform
-(`./scripts/up.sh dev` in `barber-saas-infra`), and open http://localhost:4200/sign-in.
+(`./scripts/up.sh dev` in `barber-saas-infra`), and open http://localhost:4200/sign-in
+(http://localhost:4200/sign-in/register-owner for the barbershop sign-up).
 
 ### Where the data is
 
@@ -58,9 +63,10 @@ Nowhere in this app: accounts live in `identity_auth` (identity-auth-api), the s
 
 ### How it is tested
 
-`npm test` (Vitest): validation, the calls to the API and the return address after sign-in.
+`npm test` (Vitest): validation, the calls to the API, the outcomes of the owner-onboarding saga
+and the return address after sign-in.
 CI also checks the types and builds the remote.
 
 ### What is missing
 
-Password recovery (HU-AUTH-002) and owner self-registration (HU-AUTH-003).
+Password recovery (HU-AUTH-002).
