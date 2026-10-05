@@ -16,4 +16,16 @@ export const STYLES = `
 .ia-link { display: block; width: 100%; background: none; border: 0; color: #888; text-align: center;
   margin-top: 1.25rem; font-size: .875rem; cursor: pointer; }
 .ia-link strong { color: #d4af37; }
+.ia-steps { display: flex; justify-content: center; gap: .75rem; list-style: none; padding: 0; margin: 1rem 0 1.5rem;
+  font-size: .75rem; color: #666; }
+.ia-step { display: flex; align-items: center; gap: .35rem; }
+.ia-step-on { color: #d4af37; }
+.ia-step-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #2a2a2a; display: grid;
+  place-items: center; font-weight: 700; }
+.ia-step-on .ia-step-dot { background: #d4af37; border-color: #d4af37; color: #121212; }
+.ia-summary { background: #1e1e1e; border-radius: 10px; padding: .75rem 1rem; margin: 0 0 1rem; }
+.ia-summary dt { color: #888; font-size: .75rem; margin-top: .5rem; }
+.ia-summary dd { margin: .15rem 0 0; }
+.ia-banner { background: #1a3a1a; color: #b8e6b8; border-radius: 10px; padding: .75rem; font-size: .875rem;
+  margin-bottom: 1rem; text-align: center; }
 `;
