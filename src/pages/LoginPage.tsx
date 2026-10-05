@@ -9,9 +9,10 @@ interface LoginPageProps {
   api: ApiClient;
   onSignedIn(auth: AuthResponse): void;
   onRegister(): void;
+  onRegisterBarbershop(): void;
 }
 
-export function LoginPage({ api, onSignedIn, onRegister }: LoginPageProps) {
+export function LoginPage({ api, onSignedIn, onRegister, onRegisterBarbershop }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -49,6 +50,9 @@ export function LoginPage({ api, onSignedIn, onRegister }: LoginPageProps) {
       </IonButton>
       <button type="button" className="ia-link" onClick={onRegister}>
         ¿No tienes cuenta? <strong>Regístrate</strong>
+      </button>
+      <button type="button" className="ia-link" onClick={onRegisterBarbershop}>
+        ¿Tienes una barbería? <strong>Regístrala gratis</strong>
       </button>
     </form>
   );
