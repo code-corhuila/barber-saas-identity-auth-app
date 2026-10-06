@@ -111,7 +111,7 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
                placeholder="+57 300 123 4567" value={owner.phone} error={ownerErrors.phone}
                onChange={changeOwner('phone')} />
         <Field id="owner-password" label="Contraseña" type="password" autocomplete="new-password"
-               placeholder="Mínimo 8 caracteres, una mayúscula y un número" value={owner.password}
+               placeholder="Mín. 8 caracteres, 1 mayúscula y 1 número" value={owner.password}
                error={ownerErrors.password} onChange={changeOwner('password')} />
         <Field id="owner-confirm" label="Confirmar contraseña" type="password" autocomplete="new-password"
                placeholder="Repite la contraseña" value={owner.confirmPassword}
