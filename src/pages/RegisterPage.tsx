@@ -55,7 +55,7 @@ export function RegisterPage({ api, onSignedIn, onLogin }: RegisterPageProps) {
       <Field id="register-email" label="Correo electrónico" type="email" autocomplete="email"
              placeholder="tucorreo@ejemplo.com" value={input.email} error={errors.email} onChange={change('email')} />
       <Field id="register-password" label="Contraseña" type="password" autocomplete="new-password"
-             placeholder="Mínimo 8 caracteres, una mayúscula y un número" value={input.password}
+             placeholder="Mín. 8 caracteres, 1 mayúscula y 1 número" value={input.password}
              error={errors.password} onChange={change('password')} />
       <Field id="register-phone" label="Teléfono (opcional)" type="tel" autocomplete="tel"
              placeholder="+57 300 123 4567" value={input.phone} error={errors.phone} onChange={change('phone')} />
