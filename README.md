@@ -54,7 +54,7 @@ npm start      # builds and serves dist/identity-auth at http://localhost:4301 (
 ```
 
 Then start the shell (`npm start` in `barber-saas-front`, http://localhost:4200) and the platform
-(`./scripts/up.sh dev` in `barber-saas-infra`), and open http://localhost:4200/sign-in
+(`./scripts/up.sh dev` in `barber-saas-infra-postgres`), and open http://localhost:4200/sign-in
 (http://localhost:4200/sign-in/register-owner for the barbershop sign-up).
 
 ### Where the data is
