@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { IonButton, IonSpinner } from '@ionic/react';
 import {
-  BarbershopErrors, BarbershopStep, listPlans, monthlyPrice, OwnerStep, type PublicPlan, signUpOwner,
+  barberCap, BarbershopErrors, BarbershopStep, listPlans, monthlyPrice, OwnerStep, type PublicPlan, signUpOwner,
   validateBarbershopStep, validateOwnerStep,
 } from '../auth/owner-onboarding';
 import { hasErrors } from '../auth/validation';
@@ -175,7 +175,7 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
                     onClick={() => choosePlan(plan.id)}>
               <span className="ia-plan-head">{plan.name}{planId === plan.id && <span aria-hidden="true">✓</span>}</span>
               <span className="ia-plan-price">{monthlyPrice(plan.priceCents)}</span>
-              <span className="ia-plan-detail">Hasta {plan.maxBarbers} barberos</span>
+              <span className="ia-plan-detail">{barberCap(plan.maxBarbers)}</span>
             </button>
           ))}
         </div>}
