@@ -23,9 +23,15 @@ export const STYLES = `
 .ia-step-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #2a2a2a; display: grid;
   place-items: center; font-weight: 700; }
 .ia-step-on .ia-step-dot { background: #d4af37; border-color: #d4af37; color: #121212; }
-.ia-summary { background: #1e1e1e; border-radius: 10px; padding: .75rem 1rem; margin: 0 0 1rem; }
-.ia-summary dt { color: #888; font-size: .75rem; margin-top: .5rem; }
-.ia-summary dd { margin: .15rem 0 0; }
+.ia-plans { display: grid; gap: .625rem; margin: 0 0 1rem; }
+.ia-plan { display: block; width: 100%; text-align: left; background: #1e1e1e; border: 1px solid #2a2a2a;
+  border-radius: 12px; padding: 1rem; color: #fff; cursor: pointer; font: inherit; }
+.ia-plan-on { background: #d4af37; border-color: #d4af37; color: #121212; }
+.ia-plan-head { display: flex; justify-content: space-between; font-weight: 700; }
+.ia-plan-price { display: block; color: #d4af37; font-size: 1.125rem; font-weight: 700; margin-top: .375rem; }
+.ia-plan-on .ia-plan-price { color: #121212; }
+.ia-plan-detail { display: block; color: #888; font-size: .75rem; margin-top: .25rem; }
+.ia-plan-on .ia-plan-detail { color: #3a3a3a; }
 .ia-banner { background: #1a3a1a; color: #b8e6b8; border-radius: 10px; padding: .75rem; font-size: .875rem;
   margin-bottom: 1rem; text-align: center; }
 `;
