@@ -81,6 +81,12 @@ export function monthlyPrice(priceCents: number): string {
   return `$${(priceCents / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })}/mes`;
 }
 
+/** The barber cap of a plan, worded as platform-admin-app shows it (999 means no real cap). */
+export function barberCap(maxBarbers: number): string {
+  if (maxBarbers >= 999) return 'Barberos ilimitados';
+  return maxBarbers === 1 ? 'Hasta 1 barbero' : `Hasta ${maxBarbers} barberos`;
+}
+
 /** The body of POST /api/v1/sagas/owner-onboarding; empty optional fields are left out. */
 export function onboardingBody(owner: OwnerStep, barbershop: BarbershopStep, planId: string) {
   const optional = (value: string) => (value.trim() ? value.trim() : undefined);
