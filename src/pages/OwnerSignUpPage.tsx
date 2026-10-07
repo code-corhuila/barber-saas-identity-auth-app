@@ -1,7 +1,8 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { IonButton, IonSpinner } from '@ionic/react';
 import {
-  BarbershopErrors, BarbershopStep, OwnerStep, signUpOwner, validateBarbershopStep, validateOwnerStep,
+  BarbershopErrors, BarbershopStep, listPlans, monthlyPrice, OwnerStep, type PublicPlan, signUpOwner,
+  validateBarbershopStep, validateOwnerStep,
 } from '../auth/owner-onboarding';
 import { hasErrors } from '../auth/validation';
 import { isApiError, type ApiClient, type AuthResponse } from '../shell-contract';
@@ -17,11 +18,11 @@ type Step = 1 | 2 | 3;
 
 const EMPTY_OWNER: OwnerStep = { fullName: '', email: '', phone: '', password: '', confirmPassword: '' };
 const EMPTY_SHOP: BarbershopStep = { name: '', city: '', address: '', phone: '' };
-const LABELS = ['Tu cuenta', 'Tu barbería', 'Confirmar'];
+const LABELS = ['Tu cuenta', 'Tu barbería', 'Tu plan'];
 
 /**
  * The prototype's three-step owner wizard (register-owner step1..3). Nothing is sent until the
- * last step, which runs the owner-onboarding saga; a plan is chosen later, from platform-admin.
+ * last step, where the owner picks one of the active plans and the owner-onboarding saga runs (DEC-WF-05).
  */
 export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPageProps) {
   const [step, setStep] = useState<Step>(1);
@@ -29,11 +30,32 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
   const [shop, setShop] = useState<BarbershopStep>(EMPTY_SHOP);
   const [ownerErrors, setOwnerErrors] = useState<ReturnType<typeof validateOwnerStep>>({});
   const [shopErrors, setShopErrors] = useState<BarbershopErrors>({});
+  const [plans, setPlans] = useState<PublicPlan[] | null>(null);
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [planLoads, setPlanLoads] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   // One key per intention: kept while the same data is retried, renewed when the data changes or a
   // saga has ended without an owner (a new try is a new saga).
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+
+  // The plans are read when the owner reaches the last step, and again after a plan was retired.
+  useEffect(() => {
+    if (step !== 3 || plans !== null) return;
+    let current = true;
+    listPlans(api)
+      .then((found) => { if (current) setPlans(found); })
+      .catch(() => {
+        if (current) setFailure('No pudimos cargar los planes. Inténtalo de nuevo.');
+      });
+    return () => { current = false; };
+  }, [api, step, plans, planLoads]);
+
+  function choosePlan(id: string) {
+    setPlanId(id);
+    setFailure(null);
+    setIdempotencyKey(crypto.randomUUID());
+  }
 
   function changeOwner(field: keyof OwnerStep) {
     return (value: string) => {
@@ -60,16 +82,21 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
       const found = validateBarbershopStep(shop);
       setShopErrors(found);
       if (!hasErrors(found)) setStep(3);
+    } else if (plans === null) {
+      setFailure(null);
+      setPlanLoads((n) => n + 1);
+    } else if (!planId) {
+      setFailure('Selecciona un plan para continuar');
     } else {
-      void create();
+      void create(planId);
     }
   }
 
-  async function create() {
+  async function create(chosen: string) {
     if (pending) return;
     setPending(true);
     try {
-      const outcome = await signUpOwner(api, owner, shop, idempotencyKey);
+      const outcome = await signUpOwner(api, owner, shop, chosen, idempotencyKey);
       if (outcome.kind === 'signed-in') {
         onSignedIn(outcome.auth);
         return;
@@ -78,6 +105,10 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
       if (outcome.kind === 'email-taken') {
         setOwnerErrors({ email: 'Ese correo ya está registrado. Inicia sesión o usa otro correo.' });
         setStep(1);
+      } else if (outcome.kind === 'plan-unavailable') {
+        setPlanId(null);
+        setPlans(null);
+        setFailure('Ese plan ya no está disponible. Elige otro.');
       } else {
         setFailure('No pudimos registrar tu barbería. Inténtalo de nuevo en unos minutos.');
       }
@@ -132,21 +163,30 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
       </>}
 
       {step === 3 && <>
-        <h1 className="ia-title">Confirma tus datos</h1>
-        <p className="ia-subtitle">Revisa antes de crear tu barbería</p>
-        <dl className="ia-summary">
-          <dt>Administrador</dt><dd>{owner.fullName.trim()} · {owner.email.trim()}</dd>
-          <dt>Barbería</dt><dd>{shop.name.trim()} · {shop.city.trim()}</dd>
-          {shop.address.trim() && <><dt>Dirección</dt><dd>{shop.address.trim()}</dd></>}
-        </dl>
-        <div className="ia-banner">🎉 Tienes 2 meses de prueba gratis para usar todas las funciones.</div>
+        <h1 className="ia-title">Elige tu plan</h1>
+        <p className="ia-subtitle">
+          Los primeros 2 meses son completamente gratis. Después, se cobrará la mensualidad del plan que elijas.
+        </p>
+        {plans === null && !failure && <IonSpinner name="crescent" aria-label="Cargando planes" />}
+        {plans !== null && <div className="ia-plans" role="radiogroup" aria-label="Planes">
+          {plans.map((plan) => (
+            <button key={plan.id} type="button" role="radio" aria-checked={planId === plan.id}
+                    className={planId === plan.id ? 'ia-plan ia-plan-on' : 'ia-plan'} disabled={pending}
+                    onClick={() => choosePlan(plan.id)}>
+              <span className="ia-plan-head">{plan.name}{planId === plan.id && <span aria-hidden="true">✓</span>}</span>
+              <span className="ia-plan-price">{monthlyPrice(plan.priceCents)}</span>
+              <span className="ia-plan-detail">Hasta {plan.maxBarbers} barberos</span>
+            </button>
+          ))}
+        </div>}
+        <div className="ia-banner">🎉 2 meses gratis para probar todas las funciones</div>
       </>}
 
       {failure && <div className="ia-alert" role="alert"><span aria-hidden="true">⚠️</span>{failure}</div>}
 
       <IonButton className="ia-submit" expand="block" type="submit" disabled={pending}>
         {pending ? <IonSpinner name="crescent" aria-label="Creando tu barbería" />
-          : step === 3 ? 'Crear mi barbería' : 'Continuar'}
+          : step === 3 ? (plans === null && failure ? 'Reintentar' : 'Crear mi barbería') : 'Continuar'}
       </IonButton>
       {step > 1
         ? <button type="button" className="ia-link" disabled={pending}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ApiClient } from '../shell-contract';
 import { initialView } from '../App';
 import {
-  onboardingBody, signUpOwner, validateBarbershopStep, validateOwnerStep,
+  listPlans, monthlyPrice, onboardingBody, signUpOwner, validateBarbershopStep, validateOwnerStep,
   type BarbershopStep, type OwnerOnboardingSaga, type OwnerStep,
 } from './owner-onboarding';
 
@@ -11,6 +11,7 @@ const OWNER: OwnerStep = {
   confirmPassword: 'SecurePass123',
 };
 const SHOP: BarbershopStep = { name: ' El Clásico ', city: 'Neiva', address: '', phone: ' +573001234567 ' };
+const PLAN = '7b0e2f4a-1c3d-4e5f-8a9b-000000000002';
 
 /** Answers the saga with the given body and the login with a session; records every call. */
 function fakeApi(saga: Partial<OwnerOnboardingSaga>, calls: unknown[][]): ApiClient {
@@ -50,14 +51,15 @@ describe('validateBarbershopStep', () => {
 
 describe('onboardingBody', () => {
   it('trims the fields and leaves the empty optional ones out', () => {
-    expect(JSON.parse(JSON.stringify(onboardingBody(OWNER, SHOP)))).toEqual({
+    expect(JSON.parse(JSON.stringify(onboardingBody(OWNER, SHOP, PLAN)))).toEqual({
       owner: { fullName: 'Andrés Rojas', email: 'andres@example.com', password: 'SecurePass123' },
       barbershop: { name: 'El Clásico', city: 'Neiva', phone: '+573001234567' },
+      planId: PLAN,
     });
   });
 
   it('never sends the confirmation', () => {
-    expect(JSON.stringify(onboardingBody(OWNER, SHOP))).not.toContain('confirmPassword');
+    expect(JSON.stringify(onboardingBody(OWNER, SHOP, PLAN))).not.toContain('confirmPassword');
   });
 });
 
@@ -65,7 +67,7 @@ describe('signUpOwner', () => {
   it('runs the saga with the key and signs the new owner in when it completes', async () => {
     const calls: unknown[][] = [];
 
-    const outcome = await signUpOwner(fakeApi({ status: 'COMPLETED' }, calls), OWNER, SHOP, 'key-123456789');
+    const outcome = await signUpOwner(fakeApi({ status: 'COMPLETED' }, calls), OWNER, SHOP, PLAN, 'key-123456789');
 
     expect(calls[0][0]).toBe('/api/v1/sagas/owner-onboarding');
     expect(calls[0][2]).toEqual({ idempotencyKey: 'key-123456789' });
@@ -77,17 +79,42 @@ describe('signUpOwner', () => {
     const calls: unknown[][] = [];
 
     const outcome = await signUpOwner(fakeApi({ status: 'COMPENSATED', failedStep: 'create-owner',
-      failureReason: 'EMAIL_ALREADY_REGISTERED' }, calls), OWNER, SHOP, 'key-123456789');
+      failureReason: 'EMAIL_ALREADY_REGISTERED' }, calls), OWNER, SHOP, PLAN, 'key-123456789');
 
     expect(outcome).toEqual({ kind: 'email-taken' });
     expect(calls).toHaveLength(1);
   });
 
+  it('reports a plan retired meanwhile so another one can be picked', async () => {
+    const outcome = await signUpOwner(fakeApi({ status: 'COMPENSATED', failedStep: 'assign-plan',
+      failureReason: 'PLAN_NOT_AVAILABLE' }, []), OWNER, SHOP, PLAN, 'key-123456789');
+
+    expect(outcome).toEqual({ kind: 'plan-unavailable' });
+  });
+
   it('reports any other ending as a failure to retry', async () => {
     const outcome = await signUpOwner(fakeApi({ status: 'FAILED', failureReason: 'STEP_UNAVAILABLE' }, []),
-      OWNER, SHOP, 'key-123456789');
+      OWNER, SHOP, PLAN, 'key-123456789');
 
     expect(outcome).toEqual({ kind: 'failed' });
+  });
+});
+
+describe('plans', () => {
+  it('reads the active plans of the public list', async () => {
+    const paths: string[] = [];
+    const api = { get: (path: string) => {
+      paths.push(path);
+      return Promise.resolve({ data: [{ id: PLAN, name: 'Pro', priceCents: 9990000, maxBarbers: 5 }] } as never);
+    } } as unknown as ApiClient;
+
+    expect(await listPlans(api)).toEqual([{ id: PLAN, name: 'Pro', priceCents: 9990000, maxBarbers: 5 }]);
+    expect(paths).toEqual(['/api/v1/plans?limit=100']);
+  });
+
+  it('shows the monthly price in pesos, as the prototype', () => {
+    expect(monthlyPrice(9990000)).toBe('$99.900/mes');
+    expect(monthlyPrice(17990000)).toBe('$179.900/mes');
   });
 });
 
