@@ -4,7 +4,8 @@ import { FieldErrors, validateRegister } from './validation';
 
 /**
  * Owner sign-up runs the owner-onboarding saga of barber-saas-workflow (workflow-service.yaml):
- * it creates the barbershop in TRIAL and then its owner. Messages are on-screen text.
+ * it creates the barbershop in TRIAL, assigns the plan the owner picked (DEC-WF-05) and then creates
+ * its owner. Messages are on-screen text.
  */
 export interface OwnerStep {
   fullName: string;
@@ -21,14 +22,22 @@ export interface BarbershopStep {
   phone: string;
 }
 
+/** An active plan of GET /api/v1/plans (platform-admin, public): what the owner picks at sign-up. */
+export interface PublicPlan {
+  id: string;
+  name: string;
+  priceCents: number;
+  maxBarbers: number;
+}
+
 export type BarbershopErrors = Partial<Record<keyof BarbershopStep, string>>;
 
 /** The saga in its final status (DEC-WF-02): the outcome comes in the body, not in the status code. */
 export interface OwnerOnboardingSaga {
   id: string;
   status: 'RUNNING' | 'COMPLETED' | 'COMPENSATED' | 'FAILED';
-  failedStep?: 'create-barbershop' | 'create-owner';
-  failureReason?: 'EMAIL_ALREADY_REGISTERED' | 'STEP_UNAVAILABLE' | 'INTERRUPTED';
+  failedStep?: 'create-barbershop' | 'assign-plan' | 'create-owner';
+  failureReason?: 'EMAIL_ALREADY_REGISTERED' | 'STEP_UNAVAILABLE' | 'INTERRUPTED' | 'PLAN_NOT_AVAILABLE';
   barbershopId?: string;
   userId?: string;
 }
@@ -36,6 +45,7 @@ export interface OwnerOnboardingSaga {
 export type SignUpOutcome =
   | { kind: 'signed-in'; auth: AuthResponse }
   | { kind: 'email-taken' }
+  | { kind: 'plan-unavailable' }
   | { kind: 'failed' };
 
 /** Same rules as the client sign-up, which are those of the contract, plus the confirmation. */
@@ -60,8 +70,19 @@ export function validateBarbershopStep(input: BarbershopStep): BarbershopErrors 
   return errors;
 }
 
+/** Active plans, cheapest first (the order of the contract); every one fits in one page. */
+export async function listPlans(api: ApiClient): Promise<PublicPlan[]> {
+  const page = await api.get<{ data: PublicPlan[] }>('/api/v1/plans?limit=100');
+  return page.data;
+}
+
+/** Monthly price in Colombian pesos, as the prototype shows it: 9990000 cents → '$99.900/mes'. */
+export function monthlyPrice(priceCents: number): string {
+  return `$${(priceCents / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })}/mes`;
+}
+
 /** The body of POST /api/v1/sagas/owner-onboarding; empty optional fields are left out. */
-export function onboardingBody(owner: OwnerStep, barbershop: BarbershopStep) {
+export function onboardingBody(owner: OwnerStep, barbershop: BarbershopStep, planId: string) {
   const optional = (value: string) => (value.trim() ? value.trim() : undefined);
   return {
     owner: {
@@ -76,6 +97,7 @@ export function onboardingBody(owner: OwnerStep, barbershop: BarbershopStep) {
       address: optional(barbershop.address),
       phone: optional(barbershop.phone),
     },
+    planId,
   };
 }
 
@@ -83,15 +105,18 @@ export function onboardingBody(owner: OwnerStep, barbershop: BarbershopStep) {
  * Runs the saga with an Idempotency-Key (a retry of the same data returns the same saga) and, when
  * it completes, signs the new owner in with the password they just chose.
  */
-export async function signUpOwner(api: ApiClient, owner: OwnerStep, barbershop: BarbershopStep,
+export async function signUpOwner(api: ApiClient, owner: OwnerStep, barbershop: BarbershopStep, planId: string,
                                   idempotencyKey: string): Promise<SignUpOutcome> {
   const saga = await api.post<OwnerOnboardingSaga>('/api/v1/sagas/owner-onboarding',
-    onboardingBody(owner, barbershop), { idempotencyKey });
+    onboardingBody(owner, barbershop, planId), { idempotencyKey });
   if (saga.status === 'COMPLETED') {
     return { kind: 'signed-in', auth: await login(api, { email: owner.email, password: owner.password }) };
   }
   if (saga.failureReason === 'EMAIL_ALREADY_REGISTERED') {
     return { kind: 'email-taken' };
+  }
+  if (saga.failureReason === 'PLAN_NOT_AVAILABLE') {
+    return { kind: 'plan-unavailable' };
   }
   return { kind: 'failed' };
 }
