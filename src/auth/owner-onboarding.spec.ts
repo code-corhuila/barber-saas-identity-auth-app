@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ApiClient } from '../shell-contract';
 import { initialView } from '../App';
 import {
-  listPlans, monthlyPrice, onboardingBody, signUpOwner, validateBarbershopStep, validateOwnerStep,
+  barberCap, listPlans, monthlyPrice, onboardingBody, signUpOwner, validateBarbershopStep, validateOwnerStep,
   type BarbershopStep, type OwnerOnboardingSaga, type OwnerStep,
 } from './owner-onboarding';
 
@@ -110,6 +110,12 @@ describe('plans', () => {
 
     expect(await listPlans(api)).toEqual([{ id: PLAN, name: 'Pro', priceCents: 9990000, maxBarbers: 5 }]);
     expect(paths).toEqual(['/api/v1/plans?limit=100']);
+  });
+
+  it('words the barber cap as platform-admin-app', () => {
+    expect(barberCap(1)).toBe('Hasta 1 barbero');
+    expect(barberCap(6)).toBe('Hasta 6 barberos');
+    expect(barberCap(999)).toBe('Barberos ilimitados');
   });
 
   it('shows the monthly price in pesos, as the prototype', () => {
