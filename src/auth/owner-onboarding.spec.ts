@@ -64,15 +64,15 @@ describe('onboardingBody', () => {
 });
 
 describe('signUpOwner', () => {
-  it('runs the saga with the key and signs the new owner in when it completes', async () => {
+  it('runs the saga with the key and asks the new owner for the e-mailed code', async () => {
     const calls: unknown[][] = [];
 
     const outcome = await signUpOwner(fakeApi({ status: 'COMPLETED' }, calls), OWNER, SHOP, PLAN, 'key-123456789');
 
     expect(calls[0][0]).toBe('/api/v1/sagas/owner-onboarding');
     expect(calls[0][2]).toEqual({ idempotencyKey: 'key-123456789' });
-    expect(calls[1]).toEqual(['/api/v1/auth/login', { email: 'andres@example.com', password: 'SecurePass123' }]);
-    expect(outcome.kind).toBe('signed-in');
+    expect(calls).toHaveLength(1);
+    expect(outcome).toEqual({ kind: 'verify-email', email: 'andres@example.com' });
   });
 
   it('reports an e-mail already registered and does not try to log in', async () => {

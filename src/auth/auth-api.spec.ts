@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiClient } from '../shell-contract';
-import { login, register } from './auth-api';
+import { confirmEmail, isUnverified, login, register, resendCode } from './auth-api';
 import { returnUrl } from './return-url';
 
 function recordingApi(calls: unknown[][]): ApiClient {
@@ -23,6 +23,22 @@ describe('auth-api', () => {
     expect(calls[0]).toEqual(['/api/v1/auth/register',
       { fullName: 'María', email: 'maria@example.com', password: 'SecurePass123' },
       { idempotencyKey: 'key-123456789' }]);
+  });
+
+  it('confirms the e-mailed code and asks for a new one', async () => {
+    const calls: unknown[][] = [];
+    await confirmEmail(recordingApi(calls), ' maria@example.com ', '123456');
+    await resendCode(recordingApi(calls), 'maria@example.com ');
+
+    expect(calls[0]).toEqual(['/api/v1/auth/email-verification/confirm', { email: 'maria@example.com', code: '123456' }]);
+    expect(calls[1]).toEqual(['/api/v1/auth/email-verification/resend', { email: 'maria@example.com' }]);
+  });
+
+  it('tells an unverified account from a wrong password', () => {
+    const error = (status: number) => ({ status, code: 'X', message: '', details: [], traceId: 't', userMessage: 'm' });
+    expect(isUnverified(error(403))).toBe(true);
+    expect(isUnverified(error(401))).toBe(false);
+    expect(isUnverified(new Error('network'))).toBe(false);
   });
 });
 
