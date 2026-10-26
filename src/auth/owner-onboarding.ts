@@ -1,5 +1,4 @@
-import type { ApiClient, AuthResponse } from '../shell-contract';
-import { login } from './auth-api';
+import type { ApiClient } from '../shell-contract';
 import { FieldErrors, validateRegister } from './validation';
 
 /**
@@ -43,7 +42,7 @@ export interface OwnerOnboardingSaga {
 }
 
 export type SignUpOutcome =
-  | { kind: 'signed-in'; auth: AuthResponse }
+  | { kind: 'verify-email'; email: string }
   | { kind: 'email-taken' }
   | { kind: 'plan-unavailable' }
   | { kind: 'failed' };
@@ -108,15 +107,15 @@ export function onboardingBody(owner: OwnerStep, barbershop: BarbershopStep, pla
 }
 
 /**
- * Runs the saga with an Idempotency-Key (a retry of the same data returns the same saga) and, when
- * it completes, signs the new owner in with the password they just chose.
+ * Runs the saga with an Idempotency-Key (a retry of the same data returns the same saga). When it
+ * completes, the owner confirms the code e-mailed to them before signing in (ADR-018).
  */
 export async function signUpOwner(api: ApiClient, owner: OwnerStep, barbershop: BarbershopStep, planId: string,
                                   idempotencyKey: string): Promise<SignUpOutcome> {
   const saga = await api.post<OwnerOnboardingSaga>('/api/v1/sagas/owner-onboarding',
     onboardingBody(owner, barbershop, planId), { idempotencyKey });
   if (saga.status === 'COMPLETED') {
-    return { kind: 'signed-in', auth: await login(api, { email: owner.email, password: owner.password }) };
+    return { kind: 'verify-email', email: owner.email.trim() };
   }
   if (saga.failureReason === 'EMAIL_ALREADY_REGISTERED') {
     return { kind: 'email-taken' };
