@@ -5,12 +5,12 @@ import {
   validateBarbershopStep, validateOwnerStep,
 } from '../auth/owner-onboarding';
 import { hasErrors } from '../auth/validation';
-import { isApiError, type ApiClient, type AuthResponse } from '../shell-contract';
+import { isApiError, type ApiClient } from '../shell-contract';
 import { Field } from './Field';
 
 interface OwnerSignUpPageProps {
   api: ApiClient;
-  onSignedIn(auth: AuthResponse): void;
+  onCreated(email: string): void;
   onLogin(): void;
 }
 
@@ -24,7 +24,7 @@ const LABELS = ['Tu cuenta', 'Tu barbería', 'Tu plan'];
  * The prototype's three-step owner wizard (register-owner step1..3). Nothing is sent until the
  * last step, where the owner picks one of the active plans and the owner-onboarding saga runs (DEC-WF-05).
  */
-export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPageProps) {
+export function OwnerSignUpPage({ api, onCreated, onLogin }: OwnerSignUpPageProps) {
   const [step, setStep] = useState<Step>(1);
   const [owner, setOwner] = useState<OwnerStep>(EMPTY_OWNER);
   const [shop, setShop] = useState<BarbershopStep>(EMPTY_SHOP);
@@ -97,8 +97,8 @@ export function OwnerSignUpPage({ api, onSignedIn, onLogin }: OwnerSignUpPagePro
     setPending(true);
     try {
       const outcome = await signUpOwner(api, owner, shop, chosen, idempotencyKey);
-      if (outcome.kind === 'signed-in') {
-        onSignedIn(outcome.auth);
+      if (outcome.kind === 'verify-email') {
+        onCreated(outcome.email);
         return;
       }
       setIdempotencyKey(crypto.randomUUID());
