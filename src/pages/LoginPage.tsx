@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { IonButton, IonSpinner } from '@ionic/react';
-import { login } from '../auth/auth-api';
+import { isUnverified, login } from '../auth/auth-api';
 import { FieldErrors, hasErrors, validateLogin } from '../auth/validation';
 import { isApiError, type AuthResponse, type ApiClient } from '../shell-contract';
 import { Field } from './Field';
@@ -8,11 +8,12 @@ import { Field } from './Field';
 interface LoginPageProps {
   api: ApiClient;
   onSignedIn(auth: AuthResponse): void;
+  onUnverified(email: string): void;
   onRegister(): void;
   onRegisterBarbershop(): void;
 }
 
-export function LoginPage({ api, onSignedIn, onRegister, onRegisterBarbershop }: LoginPageProps) {
+export function LoginPage({ api, onSignedIn, onUnverified, onRegister, onRegisterBarbershop }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -29,6 +30,10 @@ export function LoginPage({ api, onSignedIn, onRegister, onRegisterBarbershop }:
     try {
       onSignedIn(await login(api, { email, password }));
     } catch (err) {
+      if (isUnverified(err)) {
+        onUnverified(email.trim());
+        return;
+      }
       setFailure(isApiError(err) ? err.userMessage : 'No se pudo iniciar sesión. Inténtalo de nuevo.');
     } finally {
       setPending(false);
