@@ -41,6 +41,8 @@ export interface SessionUser {
   role: 'SUPER_ADMIN' | 'ADMIN_BARBERSHOP' | 'BARBER' | 'CLIENT';
   barbershopId: string | null;
   isActive: boolean;
+  /** auth-service.yaml 3.0.0 (ADR-018); absent in older answers. */
+  emailVerified?: boolean;
 }
 
 export interface AuthResponse {
