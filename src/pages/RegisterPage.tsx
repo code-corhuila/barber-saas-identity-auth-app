@@ -2,19 +2,19 @@ import { FormEvent, useState } from 'react';
 import { IonButton, IonSpinner } from '@ionic/react';
 import { register } from '../auth/auth-api';
 import { FieldErrors, hasErrors, RegisterInput, validateRegister } from '../auth/validation';
-import { isApiError, type AuthResponse, type ApiClient } from '../shell-contract';
+import { isApiError, type ApiClient } from '../shell-contract';
 import { Field } from './Field';
 
 interface RegisterPageProps {
   api: ApiClient;
-  onSignedIn(auth: AuthResponse): void;
+  onCreated(email: string): void;
   onLogin(): void;
 }
 
 const EMPTY: RegisterInput = { fullName: '', email: '', password: '', phone: '' };
 
-/** Self-registration creates a client account (DEC-AUTH-01) and signs it in. */
-export function RegisterPage({ api, onSignedIn, onLogin }: RegisterPageProps) {
+/** Self-registration creates a client account (DEC-AUTH-01); it signs in after the e-mailed code (ADR-018). */
+export function RegisterPage({ api, onCreated, onLogin }: RegisterPageProps) {
   const [input, setInput] = useState<RegisterInput>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function RegisterPage({ api, onSignedIn, onLogin }: RegisterPageProps) {
     if (hasErrors(found) || pending) return;
     setPending(true);
     try {
-      onSignedIn(await register(api, input, idempotencyKey));
+      onCreated((await register(api, input, idempotencyKey)).email);
     } catch (err) {
       setFailure(isApiError(err) ? err.userMessage : 'No se pudo crear la cuenta. Inténtalo de nuevo.');
     } finally {
