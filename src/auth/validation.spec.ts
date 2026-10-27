@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasErrors, validateLogin, validateRegister } from './validation';
+import { hasErrors, validateLogin, validateRegister, validateReset, validateResetEmail } from './validation';
 
 describe('validateLogin', () => {
   it('asks for the e-mail and the password', () => {
@@ -30,5 +30,22 @@ describe('validateRegister', () => {
     const errors = validateRegister({ ...valid, fullName: 'a'.repeat(121), phone: '1'.repeat(21) });
     expect(errors.fullName).toBeDefined();
     expect(errors.phone).toBeDefined();
+  });
+});
+
+describe('validateReset', () => {
+  it('asks for a valid e-mail before sending the code', () => {
+    expect(validateResetEmail('')).toEqual({ email: 'Escribe tu correo.' });
+    expect(validateResetEmail('maria@')).toEqual({ email: 'El correo no es válido.' });
+    expect(hasErrors(validateResetEmail('maria@example.com'))).toBe(false);
+  });
+
+  it('needs the six digits, the password policy and the same password twice', () => {
+    expect(validateReset({ code: '12345', password: 'NewPass123', repeat: 'NewPass123' }).code)
+      .toBe('Escribe los 6 dígitos del código.');
+    expect(validateReset({ code: '123456', password: 'newpass123', repeat: 'newpass123' }).password).toContain('mayúscula');
+    expect(validateReset({ code: '123456', password: 'NewPass123', repeat: 'NewPass124' }).repeat)
+      .toBe('Las contraseñas no coinciden.');
+    expect(hasErrors(validateReset({ code: ' 123456 ', password: 'NewPass123', repeat: 'NewPass123' }))).toBe(false);
   });
 });
