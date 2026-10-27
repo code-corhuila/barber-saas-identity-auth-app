@@ -11,10 +11,15 @@ interface LoginPageProps {
   onUnverified(email: string): void;
   onRegister(): void;
   onRegisterBarbershop(): void;
+  onForgotPassword(email: string): void;
+  /** Shown above the form, e.g. after the password was reset. */
+  notice?: string | null;
+  initialEmail?: string;
 }
 
-export function LoginPage({ api, onSignedIn, onUnverified, onRegister, onRegisterBarbershop }: LoginPageProps) {
-  const [email, setEmail] = useState('');
+export function LoginPage({ api, onSignedIn, onUnverified, onRegister, onRegisterBarbershop, onForgotPassword, notice,
+  initialEmail = '' }: LoginPageProps) {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
@@ -45,6 +50,7 @@ export function LoginPage({ api, onSignedIn, onUnverified, onRegister, onRegiste
       <div className="ia-logo" aria-hidden="true">💈</div>
       <h1 className="ia-title">Bienvenido de vuelta</h1>
       <p className="ia-subtitle">Inicia sesión para continuar</p>
+      {notice && <div className="ia-banner" role="status">{notice}</div>}
       <Field id="login-email" label="Correo electrónico" type="email" autocomplete="email"
              placeholder="tucorreo@ejemplo.com" value={email} error={errors.email} onChange={setEmail} />
       <Field id="login-password" label="Contraseña" type="password" autocomplete="current-password"
@@ -53,6 +59,9 @@ export function LoginPage({ api, onSignedIn, onUnverified, onRegister, onRegiste
       <IonButton className="ia-submit" expand="block" type="submit" disabled={pending}>
         {pending ? <IonSpinner name="crescent" aria-label="Iniciando sesión" /> : 'Iniciar sesión'}
       </IonButton>
+      <button type="button" className="ia-link" onClick={() => onForgotPassword(email.trim())}>
+        <strong>¿Olvidaste tu contraseña?</strong>
+      </button>
       <button type="button" className="ia-link" onClick={onRegister}>
         ¿No tienes cuenta? <strong>Regístrate</strong>
       </button>
