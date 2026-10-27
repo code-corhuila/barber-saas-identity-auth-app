@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiClient } from '../shell-contract';
-import { confirmEmail, isUnverified, login, register, resendCode } from './auth-api';
+import {
+  confirmEmail, confirmPasswordReset, isUnverified, login, register, requestPasswordReset, resendCode,
+} from './auth-api';
 import { returnUrl } from './return-url';
 
 function recordingApi(calls: unknown[][]): ApiClient {
@@ -32,6 +34,16 @@ describe('auth-api', () => {
 
     expect(calls[0]).toEqual(['/api/v1/auth/email-verification/confirm', { email: 'maria@example.com', code: '123456' }]);
     expect(calls[1]).toEqual(['/api/v1/auth/email-verification/resend', { email: 'maria@example.com' }]);
+  });
+
+  it('asks for a reset code and sets the new password with it', async () => {
+    const calls: unknown[][] = [];
+    await requestPasswordReset(recordingApi(calls), ' maria@example.com ');
+    await confirmPasswordReset(recordingApi(calls), 'maria@example.com', ' 123456 ', 'NewPass123');
+
+    expect(calls[0]).toEqual(['/api/v1/auth/password-reset', { email: 'maria@example.com' }]);
+    expect(calls[1]).toEqual(['/api/v1/auth/password-reset/confirm',
+      { email: 'maria@example.com', code: '123456', newPassword: 'NewPass123' }]);
   });
 
   it('tells an unverified account from a wrong password', () => {

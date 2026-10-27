@@ -33,6 +33,16 @@ export function resendCode(api: ApiClient, email: string): Promise<void> {
   return api.post<void>('/api/v1/auth/email-verification/resend', { email: email.trim() });
 }
 
+/** Always 202 (DEC-AUTH-03): the code is e-mailed only if the account exists. */
+export function requestPasswordReset(api: ApiClient, email: string): Promise<void> {
+  return api.post<void>('/api/v1/auth/password-reset', { email: email.trim() });
+}
+
+/** 204 with the right code; it closes every session of the user. 422 when the code is wrong or expired. */
+export function confirmPasswordReset(api: ApiClient, email: string, code: string, newPassword: string): Promise<void> {
+  return api.post<void>('/api/v1/auth/password-reset/confirm', { email: email.trim(), code: code.trim(), newPassword });
+}
+
 /** Login answers 403 when the password is right but the e-mail was never verified. */
 export function isUnverified(err: unknown): boolean {
   return isApiError(err) && err.status === 403;

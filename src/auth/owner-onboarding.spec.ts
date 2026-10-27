@@ -128,6 +128,7 @@ describe('initialView', () => {
   it('opens the barbershop sign-up, the client sign-up or the login', () => {
     expect(initialView('/register-owner')).toBe('register-owner');
     expect(initialView('/register')).toBe('register');
+    expect(initialView('/forgot-password')).toBe('forgot');
     expect(initialView('/')).toBe('login');
   });
 });
